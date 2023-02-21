@@ -451,6 +451,7 @@ function Sortable(el, options) {
 		on(el, 'dragenter', this);
 	}
 
+	// sortables保存所有存在的sortable实例
 	sortables.push(this.el);
 
 	// Restore sorting
@@ -1043,8 +1044,10 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			_this = this,
 			completedFired = false;
 
+		// ?
 		if (_silent) return;
 
+		// 插件发送事件
 		function dragOverEvent(name, extra) {
 			pluginEvent(name, _this, {
 				evt,
