@@ -18,15 +18,11 @@ export default function dispatchEvent(
 		options = sortable.options,
 		onName = 'on' + name.charAt(0).toUpperCase() + name.substr(1);
 	// Support for new CustomEvent feature
-	if (window.CustomEvent && !IE11OrLess && !Edge) {
-		evt = new CustomEvent(name, {
-			bubbles: true,
-			cancelable: true
-		});
-	} else {
-		evt = document.createEvent('Event');
-		evt.initEvent(name, true, true);
-	}
+	// cleancode
+	evt = new CustomEvent(name, {
+		bubbles: true,
+		cancelable: true
+	});
 
 	evt.to = toEl || rootEl;
 	evt.from = fromEl || rootEl;

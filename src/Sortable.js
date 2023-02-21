@@ -236,6 +236,7 @@ let dragEl,
 				insideVertically = y >= (rect.top - threshold) && y <= (rect.bottom + threshold);
 
 			if (insideHorizontally && insideVertically) {
+				console.log(insideHorizontally, insideVertically);
 				return (ret = sortable);
 			}
 		});
@@ -243,25 +244,33 @@ let dragEl,
 	},
 
 	_prepareGroup = function (options) {
-		function toFn(value, pull) {
+		/**
+		 * 返回一个用于判断是否可以put/pull的方法
+		 * @param {o} value 配置的pull/put值
+		 * @param {*} ispull 定义从列表出去的类型 true/false/clone/function(返回另外三值之一) value=true->pull else put
+		 * @returns 
+		 */
+		function toFn(value, ispull) {
 			return function(to, from, dragEl, evt) {
+				// 判断是否为相同group
 				let sameGroup = to.options.group.name &&
 								from.options.group.name &&
 								to.options.group.name === from.options.group.name;
 
-				if (value == null && (pull || sameGroup)) {
-					// Default pull value
-					// Default pull and put value if same group
+				if (value == null && (ispull || sameGroup)) {
+					// Default ispull value
+					// Default ispull and put value if same group
 					return true;
 				} else if (value == null || value === false) {
 					return false;
-				} else if (pull && value === 'clone') {
+				} else if (ispull && value === 'clone') {
 					return value;
 				} else if (typeof value === 'function') {
-					return toFn(value(to, from, dragEl, evt), pull)(to, from, dragEl, evt);
+					return toFn(value(to, from, dragEl, evt), ispull)(to, from, dragEl, evt);
 				} else {
-					let otherGroup = (pull ? to : from).options.group.name;
+					let otherGroup = (ispull ? to : from).options.group.name;
 
+					// put接受字符串或字符数组，表示接受的groupname
 					return (value === true ||
 					(typeof value === 'string' && value === otherGroup) ||
 					(value.join && value.indexOf(otherGroup) > -1));
@@ -272,11 +281,13 @@ let dragEl,
 		let group = {};
 		let originalGroup = options.group;
 
+		// 格式化group
 		if (!originalGroup || typeof originalGroup != 'object') {
 			originalGroup = {name: originalGroup};
 		}
 
 		group.name = originalGroup.name;
+		
 		group.checkPull = toFn(originalGroup.pull, true);
 		group.checkPut = toFn(originalGroup.put);
 		group.revertClone = originalGroup.revertClone;
@@ -311,11 +322,13 @@ if (documentExists && !ChromeForAndroid) {
 }
 
 let nearestEmptyInsertDetectEvent = function(evt) {
+	console.log('nearestEmptyInsertDetectEvent');
 	if (dragEl) {
 		evt = evt.touches ? evt.touches[0] : evt;
 		let nearest = _detectNearestEmptySortable(evt.clientX, evt.clientY);
 
 		if (nearest) {
+			console.log('nearest');
 			// Create imitation event
 			let event = {};
 			for (let i in evt) {
@@ -392,6 +405,7 @@ function Sortable(el, options) {
 		fallbackOnBody: false,
 		fallbackTolerance: 0,
 		fallbackOffset: {x: 0, y: 0},
+		// 支持触控？
 		supportPointer: Sortable.supportPointer !== false && ('PointerEvent' in window) && !Safari,
 		emptyInsertThreshold: 5
 	};
@@ -413,14 +427,18 @@ function Sortable(el, options) {
 	}
 
 	// Setup drag mode
+	// forceFallback=true不使用h5原生拖拽
+	// supportDraggable检测当前浏览器是否支持拖拽
 	this.nativeDraggable = options.forceFallback ? false : supportDraggable;
 
 	if (this.nativeDraggable) {
 		// Touch start threshold cannot be greater than the native dragstart threshold
+		// touchStartThreshold 要多少像素移动再触发drag事件
 		this.options.touchStartThreshold = 1;
 	}
 
 	// Bind events
+	// mousedown在dragstart之前调用
 	if (options.supportPointer) {
 		on(el, 'pointerdown', this._onTapStart);
 	} else {
@@ -439,6 +457,7 @@ function Sortable(el, options) {
 	options.store && options.store.get && this.sort(options.store.get(this) || []);
 
 	// Add animation state manager
+	// 附加动画方法
 	Object.assign(this, AnimationStateManager());
 }
 
@@ -467,6 +486,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			originalTarget = evt.target.shadowRoot && ((evt.path && evt.path[0]) || (evt.composedPath && evt.composedPath()[0])) || target,
 			filter = options.filter;
 
+		// ??
 		_saveInputCheckedState(el);
 
 
@@ -492,6 +512,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 		target = closest(target, options.draggable, el, false);
 
 
+		// 动画中...跳过
 		if (target && target.animated) {
 			return;
 		}
@@ -506,6 +527,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 		oldDraggableIndex = index(target, options.draggable);
 
 		// Check filter
+		// 过滤不需要拖动的元素
 		if (typeof filter === 'function') {
 			if (filter.call(this, evt, target, this)) {
 				_dispatchEvent({
@@ -545,6 +567,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			}
 		}
 
+		// 若定义了手柄却没有点击手柄，则禁止拖动
 		if (options.handle && !closest(originalTarget, options.handle, el, false)) {
 			return;
 		}
@@ -559,14 +582,19 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			options = _this.options,
 			ownerDocument = el.ownerDocument,
 			dragStartFn;
-
+		// 若当前已在拖拽状态，则跳过
 		if (target && !dragEl && (target.parentNode === el)) {
 			let dragRect = getRect(target);
+			// console.log(dragRect);
+			/*全局变量的设置 */
+			// 整体拖拽容器
 			rootEl = el;
+			// 当前拖拽的元素
 			dragEl = target;
 			parentEl = dragEl.parentNode;
 			nextEl = dragEl.nextSibling;
 			lastDownEl = target;
+			// 当前激活的group，自然是
 			activeGroup = options.group;
 
 			Sortable.dragged = dragEl;
@@ -579,10 +607,11 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 
 			tapDistanceLeft = tapEvt.clientX - dragRect.left;
 			tapDistanceTop = tapEvt.clientY - dragRect.top;
-
+			// ??
 			this._lastX = (touch || evt).clientX;
 			this._lastY = (touch || evt).clientY;
 
+			// gpu加速
 			dragEl.style['will-change'] = 'all';
 
 			dragStartFn = function () {
@@ -609,15 +638,16 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 					originalEvent: evt
 				});
 
-				// Chosen item
+				// Chosen item 改变被选中项的css
 				toggleClass(dragEl, options.chosenClass, true);
 			};
 
-			// Disable "draggable"
+			// Disable "draggable" in img, a
 			options.ignore.split(',').forEach(function (criteria) {
 				find(dragEl, criteria.trim(), _disableDraggable);
 			});
 
+			// 给document设置事件
 			on(ownerDocument, 'dragover', nearestEmptyInsertDetectEvent);
 			on(ownerDocument, 'mousemove', nearestEmptyInsertDetectEvent);
 			on(ownerDocument, 'touchmove', nearestEmptyInsertDetectEvent);
@@ -635,7 +665,9 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			pluginEvent('delayStart', this, { evt });
 
 			// Delay is impossible for native DnD in Edge or IE
+			// ie无法支持
 			if (options.delay && (!options.delayOnTouchOnly || touch) && (!this.nativeDraggable || !(Edge || IE11OrLess))) {
+				console.log("handle1");
 				if (Sortable.eventCanceled) {
 					this._onDrop();
 					return;
@@ -687,6 +719,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 		touch = touch || (evt.pointerType == 'touch' && evt);
 
 		if (!this.nativeDraggable || touch) {
+
 			if (this.options.supportPointer) {
 				on(document, 'pointermove', this._onTouchMove);
 			} else if (touch) {
@@ -699,6 +732,8 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			on(rootEl, 'dragstart', this._onDragStart);
 		}
 
+
+		// 清除文本编辑器影响
 		try {
 			if (document.selection) {
 				// Timeout neccessary for IE9
@@ -726,6 +761,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			// Apply effect
 			!fallback && toggleClass(dragEl, options.dragClass, false);
 			toggleClass(dragEl, options.ghostClass, true);
+			console.log("dragEl start")
 
 			Sortable.active = this;
 
@@ -788,6 +824,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 	},
 
 
+	// 处理非原生拖拽中事件
 	_onTouchMove: function (/**TouchEvent*/evt) {
 		if (tapEvt) {
 			let	options = this.options,
@@ -990,6 +1027,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 
 	// Returns true - if no further action is needed (either inserted or another condition)
 	_onDragOver: function (/**Event*/evt) {
+
 		let el = this.el,
 			target = evt.target,
 			dragRect,
@@ -1187,6 +1225,8 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 				}
 
 				if (onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target) !== false) {
+					console.log("swap els2");
+
 					capture();
 					if (elLastChild && elLastChild.nextSibling) { // the last draggable element is not the last node
 						el.insertBefore(dragEl, elLastChild.nextSibling);
@@ -1211,6 +1251,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 
 				if (onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, false) !== false) {
 					capture();
+					console.log("swap els3");
 					el.insertBefore(dragEl, firstChild);
 					parentEl = el; // actualization
 
@@ -1286,6 +1327,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 					if (after && !nextSibling) {
 						el.appendChild(dragEl);
 					} else {
+						console.log("swap els4");
 						target.parentNode.insertBefore(dragEl, after ? nextSibling : target);
 					}
 
@@ -1341,6 +1383,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 
 		// Get the index of the dragged element within its parent
 		newIndex = index(dragEl);
+		// 返回draggable子元素排序中的dragEl位置
 		newDraggableIndex = index(dragEl, options.draggable);
 
 		pluginEvent('drop', this, {
@@ -1350,6 +1393,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 		parentEl = dragEl && dragEl.parentNode;
 
 		// Get again after plugin event
+		// 插件事件后再次获取 插件可能打乱顺序
 		newIndex = index(dragEl);
 		newDraggableIndex = index(dragEl, options.draggable);
 

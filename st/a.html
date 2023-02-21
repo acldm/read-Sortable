@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .list > * {
+      border: 1px solid black;
+      height: 128px;;
+    }
+  </style>
+  <script>
+    window.onload = () => {
+      document.querySelector("#btn").addEventListener('mousedown', onmouse)
+      document.querySelector("#btn").addEventListener('dragstart', ondrag)
+      function onmouse() {
+        console.log("onmouse start");
+      }
+      function ondrag() {
+        console.log("ondrag start");
+      }
+    }
+    
+  </script>
+</head>
+<body>
+  <div class="list">
+    <div>hello1</div>
+    <div id="btn" draggable="true">hello2</div>
+    <div>hello3</div>
+    <div>hello4</div>
+  </div>
+</body>
+</html>
