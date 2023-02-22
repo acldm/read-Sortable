@@ -674,7 +674,6 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			// Delay is impossible for native DnD in Edge or IE
 			// ie无法支持
 			if (options.delay && (!options.delayOnTouchOnly || touch) && (!this.nativeDraggable || !(Edge || IE11OrLess))) {
-				console.log("handle1");
 				if (Sortable.eventCanceled) {
 					this._onDrop();
 					return;
@@ -768,7 +767,6 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 			// Apply effect
 			!fallback && toggleClass(dragEl, options.dragClass, false);
 			toggleClass(dragEl, options.ghostClass, true);
-			console.log("dragEl start")
 
 			// 当前Sortable实例
 			Sortable.active = this;
@@ -1244,30 +1242,25 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 
 			// el中最后的draggable元素
 			let elLastChild = lastChild(el, options.draggable);
-			if (elLastChild === null) {
-				console.log("NULL ELLAST CHILD");
-			}
-			if (_ghostIsLast(evt, vertical, this)) {
-				console.log("ghost in");
-			}
 			// 最后元素不存在(空列表情况)
-			// ghost在列表最后一个
-			// 且不在播放动画
+			// 或ghost元素在列表最后一个且且不在播放动画
+			// 意味着当前拖拽位于容器的末尾则执行此分支
 			if (!elLastChild || _ghostIsLast(evt, vertical, this) && !elLastChild.animated) {
 				// Insert to end of list
 
 				// If already at end of list: Do not insert
 				// 若最后元素为dragEl, 不要插入了
+				// 在列表最后一个元素与拖拽元素是一个对象时调用，触发条件时拖拽最后一个元素在容器底部边缘移动(需要用padding撑开容器的底部区域)
 				if (elLastChild === dragEl) {
 					console.log('no insert');
 
 					return completed(false);
 				}
 
-				console.log(elLastChild, el, evt.target);
 				// if there is a last element, it is the target
+				// 当前区域与el一致且拥有末尾元素且lastChikd时ghost
 				if (elLastChild && el === evt.target) {
-					console.log("if there is a last element, it is the target");
+					console.log("if there is a last element, it is the target", _ghostIsLast(evt, vertical, this));
 					target = elLastChild;
 				}
 
@@ -1276,7 +1269,7 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 				}
 
 				if (onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target) !== false) {
-
+					const r = onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target)
 					capture();
 					if (elLastChild && elLastChild.nextSibling) { // the last draggable element is not the last node
 						el.insertBefore(dragEl, elLastChild.nextSibling);
@@ -1290,25 +1283,31 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 					return completed(true);
 				}
 			}
+			// 容器已存在节点且当前拖拽节点的ghostEl在容器顶部
 			else if (elLastChild && _ghostIsFirst(evt, vertical, this)) {
 				// Insert to start of list
+				// 已存在了，不需要再插入
+				// 这一段可以与下面合并简化，没有关系，insertBefore再执行一遍也没关系
 				let firstChild = getChild(el, 0, options, true);
 				if (firstChild === dragEl) {
 					return completed(false);
 				}
+
 				target = firstChild;
 				targetRect = getRect(target);
 
 				if (onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, false) !== false) {
 					capture();
 					el.insertBefore(dragEl, firstChild);
-					parentEl = el; // actualization
+					// 更新拖拽所在的容器
+					parentEl = el; // actualization 
 
 					changed();
 					return completed(true);
 				}
 			}
 			else if (target.parentNode === el) {
+				console.log("wp4");
 				targetRect = getRect(target);
 				let direction = 0,
 					targetBeforeFirstSwap,
