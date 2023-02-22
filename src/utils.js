@@ -167,7 +167,7 @@ function getWindowScrollingElement() {
  * @return {Object}                               The boundingClientRect of el, with specified adjustments
  */
 function getRect(el, relativeToContainingBlock, relativeToNonStaticParent, undoScale, container) {
-	if (!el.getBoundingClientRect && el !== window) return;
+	if (!el?.getBoundingClientRect && el !== window) return;
 
 	let elRect,
 		top,

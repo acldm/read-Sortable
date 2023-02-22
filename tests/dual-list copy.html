@@ -4,6 +4,11 @@
 <head>
 	<title></title>
 	<link rel="stylesheet" type="text/css" href="./style.css">
+	<style>
+		div.list {
+			margin-top: 100px;
+		}
+	</style>
 </head>
 
 <body>
@@ -17,11 +22,11 @@
 	</div>
 
 	<div class="list half" id="list2">
-		<div>Item 2.1</div>
-		<div>Item 2.2</div>
+		<!-- <div>Item 2.1</div> -->
+		<!-- <div>Item 2.2</div>
 		<div>Item 2.3</div>
 		<div>Item 2.4</div>
-		<!-- <div>Item 2.5</div> -->
+		<div>Item 2.5</div> -->
 	</div>
 
 
@@ -31,18 +36,21 @@
 		new Sortable(document.getElementById('list1'), {
 			animation: 200,
 			group: {
-				name: 'shared',
-				// pull: 'clone',
+				name: "shared",
+				pull: true,
 				put: true
 			},
+			emptyInsertThreshold: 100,
+
 		});
 		new Sortable(document.getElementById('list2'), {
 			animation: 200,
 			group: {
-				name: 'shared',
-				// pull: 'clone',
+				name: "shared",
+				pull: true,
 				put: true
 			},
+			emptyInsertThreshold: 100,
 		});
 	</script>
 
