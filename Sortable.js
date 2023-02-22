@@ -343,7 +343,7 @@
 
 
   function getRect(el, relativeToContainingBlock, relativeToNonStaticParent, undoScale, container) {
-    if (!el.getBoundingClientRect && el !== window) return;
+    if (!(el !== null && el !== void 0 && el.getBoundingClientRect) && el !== window) return;
     var elRect, top, left, bottom, right, height, width;
 
     if (el !== window && el.parentNode && el !== getWindowScrollingElement()) {
@@ -1009,7 +1009,6 @@
       newDraggableIndex: newDraggableIndex
     }, info));
   }
-
   var dragEl,
       parentEl,
       ghostEl,
@@ -1022,7 +1021,8 @@
       newIndex,
       oldDraggableIndex,
       newDraggableIndex,
-      activeGroup,
+      // 当前拖拽的group，在prepareStart中更新
+  activeGroup,
       putSortable,
       awaitingDragStarted = false,
       ignoreNextClick = false,
@@ -1100,33 +1100,36 @@
 
   /**
    * Detects first nearest empty sortable to X and Y position using emptyInsertThreshold.
+   * 用于检测拖动项目到排列容器中，若该容器为空时，则鼠标与容器距离，若小于emptyInsertThreshold的值。则认为已进入该容器
    * @param  {Number} x      X position
    * @param  {Number} y      Y position
    * @return {HTMLElement}   Element of the first found nearest Sortable
    */
   _detectNearestEmptySortable = function _detectNearestEmptySortable(x, y) {
-    var ret;
+    var ret; // 所有sortables容器集合
+
     sortables.some(function (sortable) {
-      var threshold = sortable[expando].options.emptyInsertThreshold;
+      // expando Sortable实例
+      var threshold = sortable[expando].options.emptyInsertThreshold; // lastChild用于判断容器中是否已存在element。若容器中已有元素存在，则不再使用该检测
+
       if (!threshold || lastChild(sortable)) return;
-      var rect = getRect(sortable),
-          insideHorizontally = x >= rect.left - threshold && x <= rect.right + threshold,
-          insideVertically = y >= rect.top - threshold && y <= rect.bottom + threshold;
+      var rect = getRect(sortable);
+      var insideHorizontally = x >= rect.left - threshold && x <= rect.right + threshold;
+      var insideVertically = y >= rect.top - threshold && y <= rect.bottom + threshold;
 
       if (insideHorizontally && insideVertically) {
-        console.log(insideHorizontally, insideVertically);
         return ret = sortable;
       }
     });
     return ret;
   },
-      _prepareGroup = function _prepareGroup(options) {
+      _prepareGroup = function _prepareGroup(options, el) {
     /**
      * 返回一个用于判断是否可以put/pull的方法
      * @param {o} value 配置的pull/put值
      * @param {*} ispull 定义从列表出去的类型 true/false/clone/function(返回另外三值之一) value=true->pull else put
      * @returns 
-     */
+    */
     function toFn(value, ispull) {
       return function (to, from, dragEl, evt) {
         // 判断是否为相同group
@@ -1160,6 +1163,7 @@
     }
 
     group.name = originalGroup.name;
+    group.uname = el;
     group.checkPull = toFn(originalGroup.pull, true);
     group.checkPut = toFn(originalGroup.put);
     group.revertClone = originalGroup.revertClone;
@@ -1190,16 +1194,13 @@
   }
 
   var nearestEmptyInsertDetectEvent = function nearestEmptyInsertDetectEvent(evt) {
-    console.log('nearestEmptyInsertDetectEvent');
-
     if (dragEl) {
       evt = evt.touches ? evt.touches[0] : evt;
 
       var nearest = _detectNearestEmptySortable(evt.clientX, evt.clientY);
 
       if (nearest) {
-        console.log('nearest'); // Create imitation event
-
+        // Create imitation event
         var event = {};
 
         for (var i in evt) {
@@ -1291,7 +1292,7 @@
       !(name in options) && (options[name] = defaults[name]);
     }
 
-    _prepareGroup(options); // Bind all private methods
+    _prepareGroup(options, el); // Bind all private methods
 
 
     for (var fn in this) {
@@ -1473,9 +1474,10 @@
         rootEl = el; // 当前拖拽的元素
 
         dragEl = target;
-        parentEl = dragEl.parentNode;
+        parentEl = dragEl.parentNode; // dragEl紧跟的元素
+
         nextEl = dragEl.nextSibling;
-        lastDownEl = target; // 当前激活的group，自然是
+        lastDownEl = target; // 当前激活的group
 
         activeGroup = options.group;
         Sortable.dragged = dragEl;
@@ -1510,6 +1512,7 @@
           if (!FireFox && _this.nativeDraggable) {
             dragEl.draggable = true;
           } // Bind the events: dragstart/dragend
+          // 正式的move事件绑定
 
 
           _this._triggerDragStart(evt, touch); // Drag start event
@@ -1644,7 +1647,8 @@
 
         !fallback && toggleClass(dragEl, options.dragClass, false);
         toggleClass(dragEl, options.ghostClass, true);
-        console.log("dragEl start");
+        console.log("dragEl start"); // 当前Sortable实例
+
         Sortable.active = this;
         fallback && this._appendGhost(); // Drag start event
 
@@ -1897,7 +1901,8 @@
           fromSortable = putSortable || activeSortable,
           vertical,
           _this = this,
-          completedFired = false;
+          completedFired = false; // ??
+
 
       if (_silent) return;
 
@@ -2007,19 +2012,35 @@
 
       if (evt.preventDefault !== void 0) {
         evt.cancelable && evt.preventDefault();
-      }
+      } // 获取最近拖动的元素
+
 
       target = closest(target, options.draggable, el, true);
       dragOverEvent('dragOver');
       if (Sortable.eventCanceled) return completedFired;
 
-      if (dragEl.contains(evt.target) || target.animated && target.animatingX && target.animatingY || _this._ignoreWhileAnimating === target) {
+      if ( // 若当前放置区域就是当前拖拽元素
+      dragEl.contains(evt.target) || // 或者正在动画中
+      target.animated && target.animatingX && target.animatingY || // 直接调用completed完成over事件
+      _this._ignoreWhileAnimating === target) {
         return completed(false);
-      }
+      } // ?
 
-      ignoreNextClick = false;
 
-      if (activeSortable && !options.disabled && (isOwner ? canSort || (revert = parentEl !== rootEl) // Reverting item into the original list
+      ignoreNextClick = false; // if (isOwner === true  && !canSort && parentEl !== rootEl) {
+      // 	console.log(isOwner, parentEl, rootEl);
+      // }
+      // activeSortable 当前Sortable实例
+      // 判断sortable可用
+
+      if (activeSortable && !options.disabled && ( // activeGroup (拖拽开始的组) === group (鼠标当前所在组，也即调用该事件的组)， 判断是否在同一group中，以group对象直接判断否而非name判断
+      isOwner // canSort === options.sort: 单元格是否可以排序
+      // 若不能排序，则判断是否是嵌套列表，parentEl是拖动元素的父元素， parentEl不等于rootEl,revert为true 否则为false跳过该if
+      // parentEl 与rootEl不一致的情况只有在连续的一次拖动中跨越到不同sortable实例区域才可能发生
+      // 这种情况下，parentEl的值应该是鼠标拖动开始时的El,  而rootEl的值是当前所在的sortableEl
+      // rootEl是dragEl在prepareStart中设置为拖拽容器本身，会在nearestEmptyInsertDetectEvent更新
+      // parentEl在prepareStart中设置为拖拽元素的父元素，本身会随着拖拽的变化而更新
+      ? canSort || (revert = parentEl !== rootEl) // Reverting item into the original list
       : putSortable === this || (this.lastPutMode = activeGroup.checkPull(this, activeSortable, dragEl, evt)) && group.checkPut(this, activeSortable, dragEl, evt))) {
         vertical = this._getDirection(evt, target) === 'vertical';
         dragRect = getRect(dragEl);
@@ -2027,6 +2048,7 @@
         if (Sortable.eventCanceled) return completedFired;
 
         if (revert) {
+          // console.log("revert");
           parentEl = rootEl; // actualization
 
           capture();
@@ -2036,6 +2058,7 @@
           dragOverEvent('revert');
 
           if (!Sortable.eventCanceled) {
+            // nextEl:dragEl后的元素，若存在则插入
             if (nextEl) {
               rootEl.insertBefore(dragEl, nextEl);
             } else {
@@ -2044,19 +2067,35 @@
           }
 
           return completed(true);
-        }
+        } // el中最后的draggable元素
+
 
         var elLastChild = lastChild(el, options.draggable);
+
+        if (elLastChild === null) {
+          console.log("NULL ELLAST CHILD");
+        }
+
+        if (_ghostIsLast(evt, vertical, this)) {
+          console.log("ghost in");
+        } // 最后元素不存在(空列表情况)
+        // ghost在列表最后一个
+        // 且不在播放动画
+
 
         if (!elLastChild || _ghostIsLast(evt, vertical, this) && !elLastChild.animated) {
           // Insert to end of list
           // If already at end of list: Do not insert
+          // 若最后元素为dragEl, 不要插入了
           if (elLastChild === dragEl) {
+            console.log('no insert');
             return completed(false);
-          } // if there is a last element, it is the target
+          }
 
+          console.log(elLastChild, el, evt.target); // if there is a last element, it is the target
 
           if (elLastChild && el === evt.target) {
+            console.log("if there is a last element, it is the target");
             target = elLastChild;
           }
 
@@ -2065,7 +2104,6 @@
           }
 
           if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target) !== false) {
-            console.log("swap els2");
             capture();
 
             if (elLastChild && elLastChild.nextSibling) {
@@ -2093,7 +2131,6 @@
 
           if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, false) !== false) {
             capture();
-            console.log("swap els3");
             el.insertBefore(dragEl, firstChild);
             parentEl = el; // actualization
 
@@ -2154,7 +2191,6 @@
             if (after && !nextSibling) {
               el.appendChild(dragEl);
             } else {
-              console.log("swap els4");
               target.parentNode.insertBefore(dragEl, after ? nextSibling : target);
             } // Undo chrome's scroll adjustment (has no effect on other browsers)
 
@@ -2621,6 +2657,11 @@
 
   function _ghostIsLast(evt, vertical, sortable) {
     var rect = getRect(lastChild(sortable.el, sortable.options.draggable));
+
+    if (!rect) {
+      return;
+    }
+
     var spacer = 10;
     return vertical ? evt.clientX > rect.right + spacer || evt.clientX <= rect.right && evt.clientY > rect.bottom && evt.clientX >= rect.left : evt.clientX > rect.right && evt.clientY > rect.top || evt.clientX <= rect.right && evt.clientY > rect.bottom + spacer;
   }
