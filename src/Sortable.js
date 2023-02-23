@@ -1306,17 +1306,18 @@ Sortable.prototype = /** @lends Sortable.prototype */ {
 					return completed(true);
 				}
 			}
+			// 非 头部尾部 移动
 			else if (target.parentNode === el) {
-				console.log("wp4");
 				targetRect = getRect(target);
 				let direction = 0,
 					targetBeforeFirstSwap,
+					// 拖拽和放置在不同容器?
 					differentLevel = dragEl.parentNode !== el,
+					// 判断拖动元素与目标元素在同一行列中
 					differentRowCol = !_dragElInRowColumn(dragEl.animated && dragEl.toRect || dragRect, target.animated && target.toRect || targetRect, vertical),
 					side1 = vertical ? 'top' : 'left',
 					scrolledPastTop = isScrolledPast(target, 'top', 'top') || isScrolledPast(dragEl, 'top', 'top'),
 					scrollBefore = scrolledPastTop ? scrolledPastTop.scrollTop : void 0;
-
 
 				if (lastTarget !== target) {
 					targetBeforeFirstSwap = targetRect[side1];

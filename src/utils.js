@@ -255,6 +255,7 @@ function getRect(el, relativeToContainingBlock, relativeToNonStaticParent, undoS
 }
 
 /**
+ * 检查元素的一侧是否滚动超过其父元素的一侧
  * Checks if a side of an element is scrolled past a side of its parents
  * @param  {HTMLElement}  el           The element who's side being scrolled out of view is in question
  * @param  {String}       elSide       Side of the element in question ('top', 'left', 'right', 'bottom')
@@ -419,6 +420,8 @@ function getParentAutoScrollElement(el, includeSelf) {
 		// we don't need to get elem css if it isn't even overflowing in the first place (performance)
 		if (elem.clientWidth < elem.scrollWidth || elem.clientHeight < elem.scrollHeight) {
 			let elemCSS = css(elem);
+
+			// 判断是否有滚动条
 			if (
 				elem.clientWidth < elem.scrollWidth && (elemCSS.overflowX == 'auto' || elemCSS.overflowX == 'scroll') ||
 				elem.clientHeight < elem.scrollHeight && (elemCSS.overflowY == 'auto' || elemCSS.overflowY == 'scroll')

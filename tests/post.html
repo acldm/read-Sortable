@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="./style.css">
+	<style>
+		div.list {
+			height: 300px;
+			overflow-y: auto;
+			/* padding: 20px 0; */
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="list" id="list1">
+		<div>Item 1.1</div>
+		<div>Item 1.2</div>
+		<div>Item 1.3</div>
+		<div>Item 1.4</div>
+		<div>Item 1.5</div>
+		<div>Item 1.5</div>
+		<div>Item 1.5</div>
+		<div>Item 1.5</div>
+	</div>
+
+
+	<script src="../Sortable.js"></script>
+
+	<script type="text/javascript">
+		new Sortable(document.getElementById('list1'), {
+			animation: 200,
+			group: {
+				name: "shared",
+				pull: true,
+				put: true
+			},
+			emptyInsertThreshold: 100,
+
+		});
+		new Sortable(document.getElementById('list2'), {
+			animation: 200,
+			group: {
+				name: "shared",
+				pull: true,
+				put: true
+			},
+			emptyInsertThreshold: 100,
+		});
+	</script>
+
+</body>
+
+</html>
